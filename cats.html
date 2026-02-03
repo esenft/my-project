@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bouncing Cats</title>
+  <style>
+    :root{--cat-size:48px}
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f7f7f7}
+    .wrapper{display:flex;flex-direction:column;align-items:center;gap:12px}
+    h1{margin:0;font-size:20px}
+    .box{width:900px;height:500px;border:4px solid #333;border-radius:8px;background:linear-gradient(#fff,#f0f0f0);position:relative;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+    .cat{position:absolute;left:0;top:0;width:var(--cat-size);height:var(--cat-size);font-size:40px;display:flex;align-items:center;justify-content:center;pointer-events:none;user-select:none}
+    .controls{display:flex;gap:10px;align-items:center}
+    button{padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer}
+    .info{font-size:14px;color:#333}
+    .hint{font-size:13px;color:#666}
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>💡 <strong>Bouncing Cats</strong></h1>
+    <div class="hint">Click anywhere inside the box to spawn a cat. Cats bounce off walls, have random velocity, and no gravity.</div>
+    <div class="box" id="box" title="Click to add a cat"></div>
+    <div class="controls">
+      <button id="clear">Clear Cats</button>
+      <div class="info">Cats: <strong id="count">0</strong></div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const box = document.getElementById('box');
+      const countEl = document.getElementById('count');
+      const clearBtn = document.getElementById('clear');
+      const cats = [];
+      const CAT_SIZE = 48; // px
+
+      function rand(min,max){ return Math.random()*(max-min)+min }
+
+      function addCat(clientX, clientY){
+        const rect = box.getBoundingClientRect();
+        // position the cat centered on the click
+        let x = clientX - rect.left - CAT_SIZE/2;
+        let y = clientY - rect.top - CAT_SIZE/2;
+        // clamp inside box
+        x = Math.max(0, Math.min(x, rect.width - CAT_SIZE));
+        y = Math.max(0, Math.min(y, rect.height - CAT_SIZE));
+
+        const el = document.createElement('div');
+        el.className = 'cat';
+        el.textContent = '🐱';
+        el.style.transform = `translate(${x}px, ${y}px)`;
+        box.appendChild(el);
+
+        // random velocity, no gravity (vx, vy in px/frame)
+        let vx = 0, vy = 0;
+        while (Math.abs(vx) < 0.6) vx = rand(-3.5, 3.5);
+        while (Math.abs(vy) < 0.6) vy = rand(-3.5, 3.5);
+
+        cats.push({el, x, y, vx, vy});
+        updateCount();
+      }
+
+      // click to add
+      box.addEventListener('click', (e) => addCat(e.clientX, e.clientY));
+
+      clearBtn.addEventListener('click', () => {
+        cats.forEach(c => c.el.remove());
+        cats.length = 0;
+        updateCount();
+      });
+
+      function updateCount(){ countEl.textContent = cats.length }
+
+      function step(){
+        const rect = box.getBoundingClientRect();
+        const w = rect.width, h = rect.height;
+        for (const c of cats){
+          c.x += c.vx;
+          c.y += c.vy;
+          // bounce on walls
+          if (c.x <= 0){ c.x = 0; c.vx *= -1 }
+          if (c.x + CAT_SIZE >= w){ c.x = w - CAT_SIZE; c.vx *= -1 }
+          if (c.y <= 0){ c.y = 0; c.vy *= -1 }
+          if (c.y + CAT_SIZE >= h){ c.y = h - CAT_SIZE; c.vy *= -1 }
+          c.el.style.transform = `translate(${c.x}px, ${c.y}px)`;
+        }
+        requestAnimationFrame(step);
+      }
+
+      // populate a few starter cats
+      requestAnimationFrame(() => {
+        const initCount = 3;
+        const br = box.getBoundingClientRect();
+        for (let i=0;i<initCount;i++){
+          const cx = box.clientWidth*(0.2 + Math.random()*0.6);
+          const cy = box.clientHeight*(0.2 + Math.random()*0.6);
+          addCat(br.left + cx, br.top + cy);
+        }
+      });
+
+      requestAnimationFrame(step);
+
+      // stop selection while clicking/dragging
+      box.addEventListener('mousedown', (e) => e.preventDefault());
+    })();
+  </script>
+</body>
+</html>
